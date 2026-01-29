@@ -1,106 +1,106 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <title>Quản lý điểm thi</title>
-  <script type="module">
-    // Import Firebase SDK
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    // Firebase config (code của bạn)
-    const firebaseConfig = {
-      apiKey: "AIzaSyAlSuF-aKmhGB3btxsflPCJ2_xamRhZZEI",
-      authDomain: "duyiron12dz-4b834.firebaseapp.com",
-      projectId: "duyiron12dz-4b834",
-      storageBucket: "duyiron12dz-4b834.firebasestorage.app",
-      messagingSenderId: "325144292460",
-      appId: "1:325144292460:web:3d4c5fd82fb1bb20667c49",
-      measurementId: "G-FR7EYX3379"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    const db = getFirestore(app);
-
-    // Thêm điểm
-    window.addScore = async function () {
-      const name = document.getElementById("name").value;
-      const subject = document.getElementById("subject").value;
-      const score = document.getElementById("score").value;
-
-      if (!name || !subject || !score) {
-        alert("Vui lòng nhập đầy đủ thông tin");
-        return;
-      }
-
-      await addDoc(collection(db, "scores"), {
-        name,
-        subject,
-        score: Number(score)
-      });
-
-      loadScores();
-    };
-
-    // Load danh sách điểm
-    async function loadScores() {
-      const table = document.getElementById("scoreTable");
-      table.innerHTML = "";
-
-      const querySnapshot = await getDocs(collection(db, "scores"));
-      querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        const row = `
-          <tr>
-            <td>${data.name}</td>
-            <td>${data.subject}</td>
-            <td>${data.score}</td>
-            <td><button onclick="deleteScore('${docSnap.id}')">Xóa</button></td>
-          </tr>`;
-        table.innerHTML += row;
-      });
-    }
-
-    // Xóa điểm
-    window.deleteScore = async function (id) {
-      await deleteDoc(doc(db, "scores", id));
-      loadScores();
-    };
-
-    window.onload = loadScores;
-  </script>
-
-  <style>
-    body { font-family: Arial; margin: 40px; }
-    input { margin: 5px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    th { background: #f2f2f2; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Quản Lý Điểm Thi</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; line-height: 1.6; }
+        .container { max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
+        input { display: block; width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box; }
+        button { background: #28a745; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; }
+        button.delete { background: #dc3545; margin-left: 10px; padding: 5px 10px; }
+        ul { list-style: none; padding: 0; }
+        li { background: #f4f4f4; margin-top: 5px; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 4px; }
+    </style>
 </head>
 <body>
-  <h2>Trang quản lý điểm thi</h2>
 
-  <div>
-    <input id="name" placeholder="Tên sinh viên" />
-    <input id="subject" placeholder="Môn học" />
-    <input id="score" type="number" placeholder="Điểm" />
-    <button onclick="addScore()">Thêm điểm</button>
-  </div>
+<div class="container">
+    <h2>Nhập Điểm Thi</h2>
+    <input type="text" id="studentName" placeholder="Họ và tên">
+    <input type="text" id="studentClass" placeholder="Lớp">
+    <input type="text" id="subject" placeholder="Môn học">
+    <input type="number" id="score" placeholder="Điểm số">
+    <button id="btnSave">Lưu điểm số</button>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Tên</th>
-        <th>Môn</th>
-        <th>Điểm</th>
-        <th>Thao tác</th>
-      </tr>
-    </thead>
-    <tbody id="scoreTable"></tbody>
-  </table>
+    <hr>
+    <h3>Danh sách điểm</h3>
+    <ul id="listDiem"></ul>
+</div>
+
+<script type="module">
+    // Import các hàm cần thiết
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // Cấu hình của bạn
+    const firebaseConfig = {
+        apiKey: "AIzaSyAlSuF-aKmhGB3btxsflPCJ2_xamRhZZEI",
+        authDomain: "duyiron12dz-4b834.firebaseapp.com",
+        projectId: "duyiron12dz-4b834",
+        storageBucket: "duyiron12dz-4b834.firebasestorage.app",
+        messagingSenderId: "325144292460",
+        appId: "1:325144292460:web:3d4c5fd82fb1bb20667c49",
+        measurementId: "G-FR7EYX3379"
+    };
+
+    // Khởi tạo Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const colRef = collection(db, "diemThi");
+
+    // Lấy các phần tử DOM
+    const btnSave = document.getElementById('btnSave');
+    const listDiem = document.getElementById('listDiem');
+
+    // HÀM LƯU DỮ LIỆU
+    btnSave.addEventListener('click', async () => {
+        const name = document.getElementById('studentName').value;
+        const className = document.getElementById('studentClass').value;
+        const subject = document.getElementById('subject').value;
+        const score = document.getElementById('score').value;
+
+        if(name && score) {
+            await addDoc(colRef, {
+                ten: name,
+                lop: className,
+                mon: subject,
+                diem: score,
+                createdAt: new Date()
+            });
+            alert("Đã thêm thành công!");
+            // Reset form
+            document.querySelectorAll('input').forEach(input => input.value = '');
+        } else {
+            alert("Vui lòng nhập tên và điểm!");
+        }
+    });
+
+    // HÀM HIỂN THỊ VÀ XÓA (Tự động cập nhật khi dữ liệu thay đổi)
+    onSnapshot(colRef, (snapshot) => {
+        listDiem.innerHTML = '';
+        snapshot.docs.forEach(docSnap => {
+            const data = docSnap.data();
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <span><b>${data.ten}</b> - Lớp: ${data.lop} - Môn: ${data.mon}: <b>${data.diem}đ</b></span>
+                <button class="delete" data-id="${docSnap.id}">Xóa</button>
+            `;
+            listDiem.appendChild(li);
+        });
+
+        // Gắn sự kiện xóa
+        const deleteBtns = document.querySelectorAll('.delete');
+        deleteBtns.forEach(btn => {
+            btn.onclick = async (e) => {
+                const id = e.target.getAttribute('data-id');
+                if(confirm("Bạn có chắc muốn xóa?")) {
+                    await deleteDoc(doc(db, "diemThi", id));
+                }
+            }
+        });
+    });
+</script>
+
 </body>
 </html>
